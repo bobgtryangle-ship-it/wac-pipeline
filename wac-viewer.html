@@ -113,11 +113,23 @@ body{min-height:100vh;display:flex;flex-direction:column;align-items:center;
 /* ---------- read image + audio + meta from the URL ----------
    Usage: viewer.html?img=<photoURL>&audio=<mp3URL>&store=Big%20Y%20%237&date=2026-06-26
 */
-const params=new URLSearchParams(location.search);
-const imgURL=params.get('img');
-const audioURL=params.get('audio');
-const storeName=params.get('store')||'';
-const dateStr=params.get('date')||'';
+const SUPABASE_BASE = 'https://uudaxwxddhfvkmkpxssv.supabase.co/storage/v1/object/public/reports/';
+const params = new URLSearchParams(location.search);
+let imgURL, audioURL, storeName, dateStr;
+const sid = params.get('id');
+if (sid) {
+  const pe = params.get('pe') || 'jpg';
+  const ae = params.get('ae') || 'mp3';
+  imgURL   = SUPABASE_BASE + encodeURIComponent(sid + '-photo.' + pe);
+  audioURL = SUPABASE_BASE + encodeURIComponent(sid + '-song.' + ae);
+  storeName = params.get('s') || '';
+  dateStr   = params.get('d') || '';
+} else {
+  imgURL    = params.get('img');
+  audioURL  = params.get('audio');
+  storeName = params.get('store') || '';
+  dateStr   = params.get('date') || '';
+}
 
 const $=id=>document.getElementById(id);
 

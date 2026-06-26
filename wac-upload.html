@@ -143,10 +143,13 @@ $('go').onclick=async()=>{
   const date=$('date').value.trim()||new Date().toISOString().slice(0,10);
   const store=$('store').value.trim();
   if(store)localStorage.setItem('wac-laststore',store);
-  const stamp=date+(store?('-'+slug(store)):'')+'-'+Date.now().toString().slice(-4);
-
-  const photoPath=`${stamp}-photo.${ext(photoFile.name,'jpg')}`;
-  const audioPath=`${stamp}-song.${ext(audioFile.name,'mp3')}`;
+  const mmdd = date.replace(/-/g,'').slice(4);           // e.g. 0626
+  const rand = Math.random().toString(36).slice(2,6);    // 4 random chars
+  const slugId = mmdd + '-' + rand;                       // e.g. 0626-k7p2
+  const pe = ext(photoFile.name,'jpg');                   // photo extension
+  const ae = ext(audioFile.name,'mp3');                   // audio extension
+  const photoPath = `${slugId}-photo.${pe}`;
+  const audioPath = `${slugId}-song.${ae}`;
 
   try{
     setProg('Uploading photo…',5);
@@ -155,9 +158,13 @@ $('go').onclick=async()=>{
     const audioPublic=await uploadOne(audioFile,audioPath,(p)=>setProg('Uploading song…',50+p*0.48));
     setProg('Done',100);
 
+    // Build a SHORT link — id + extension hints, plus optional store/date for display:
     const q=new URLSearchParams();
-    q.set('img',photoPublic);q.set('audio',audioPublic);
-    if(store)q.set('store',store);if(date)q.set('date',date);
+    q.set('id',slugId);
+    q.set('pe',pe);
+    q.set('ae',ae);
+    if(store)q.set('s',store);
+    if(date)q.set('d',date);
     const link=viewerBase+(viewerBase.includes('?')?'&':'?')+q.toString();
 
     $('linkbox').textContent=link;
