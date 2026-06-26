@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>WAC Link Builder</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#0A1A24;--bg2:#0E2230;--bg3:#143040;--gold:#EDB231;--green:#34C759;--red:#FF453A;--ink:#EAF1F5;--muted:#8BA3B2;--line:#21465C;}
+body{min-height:100vh;background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;padding:22px 14px 50px;}
+.wrap{max-width:560px;margin:0 auto;}
+.head{display:flex;align-items:center;gap:12px;margin-bottom:8px;}
+.logo{width:44px;height:44px;border-radius:11px;background:var(--gold);display:flex;align-items:center;justify-content:center;font-weight:800;color:#1a1305;font-size:14px;}
+h1{font-size:20px;font-weight:700;line-height:1.1;}
+.sub{font-size:13px;color:var(--muted);margin:2px 0 22px;}
+.field{margin-bottom:16px;}
+label{display:block;font-size:12px;color:var(--muted);font-weight:600;margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px;}
+label .opt{color:var(--line);text-transform:none;letter-spacing:0;font-weight:400;}
+input{width:100%;background:var(--bg2);border:1px solid var(--line);color:var(--ink);border-radius:10px;padding:12px;font-size:15px;}
+input:focus{outline:none;border-color:var(--gold);}
+.base-note{font-size:12px;color:var(--muted);margin-top:5px;line-height:1.4;}
+.btn{width:100%;border:none;border-radius:11px;font-weight:700;font-size:16px;padding:14px;margin-top:6px;cursor:pointer;}
+.btn-gold{background:var(--gold);color:#1a1305;}
+.out{margin-top:22px;display:none;}
+.out.show{display:block;}
+.out-label{font-size:12px;color:var(--gold);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;}
+.linkbox{background:var(--bg2);border:1px solid var(--line);border-radius:10px;padding:12px;font-size:13px;
+  word-break:break-all;line-height:1.5;color:var(--ink);font-family:'Share Tech Mono',monospace;margin-bottom:10px;max-height:160px;overflow:auto;}
+.row{display:flex;gap:8px;}
+.row .btn{flex:1;margin-top:0;}
+.btn-ghost{background:var(--bg3);color:var(--ink);border:1px solid var(--line);}
+.warn{background:rgba(255,69,58,0.1);border:1px solid rgba(255,69,58,0.3);color:#ff9f9f;padding:11px;border-radius:9px;font-size:13px;margin-top:12px;line-height:1.4;display:none;}
+.warn.show{display:block;}
+.toast{position:fixed;left:50%;bottom:30px;transform:translateX(-50%);background:#000;color:#fff;padding:11px 18px;border-radius:10px;font-size:14px;opacity:0;transition:opacity .25s;pointer-events:none;}
+.toast.show{opacity:.95;}
+.divider{height:1px;background:var(--line);margin:22px 0;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="head">
+    <div class="logo">WAC</div>
+    <div><h1>Weekly Ad Check &mdash; Link Builder</h1></div>
+  </div>
+  <div class="sub">Paste your Supabase links, fill in the details, get a ready-to-email viewer link.</div>
+
+  <div class="field">
+    <label>Viewer page address <span class="opt">(set once)</span></label>
+    <input id="base" placeholder="https://yoursite.netlify.app/wac-viewer.html">
+    <div class="base-note">This is where you deployed wac-viewer.html. Saved on this device so you only enter it once.</div>
+  </div>
+
+  <div class="divider"></div>
+
+  <div class="field">
+    <label>Photo URL <span class="opt">(from Supabase)</span></label>
+    <input id="img" placeholder="https://...supabase.co/.../Weekly Ad Checks ....jpeg">
+  </div>
+  <div class="field">
+    <label>Audio URL <span class="opt">(from Supabase)</span></label>
+    <input id="audio" placeholder="https://...supabase.co/.../....mp3">
+  </div>
+  <div class="field">
+    <label>Store <span class="opt">(optional)</span></label>
+    <input id="store" placeholder="Big Y #7">
+  </div>
+  <div class="field">
+    <label>Date <span class="opt">(optional)</span></label>
+    <input id="date" placeholder="2026-06-26">
+  </div>
+
+  <button class="btn btn-gold" id="make">Build Link</button>
+
+  <div class="warn" id="warn"></div>
+
+  <div class="out" id="out">
+    <div class="out-label">Your viewer link</div>
+    <div class="linkbox" id="linkbox"></div>
+    <div class="row">
+      <button class="btn btn-gold" id="copy">Copy Link</button>
+      <button class="btn btn-ghost" id="open">Open / Test</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const $=id=>document.getElementById(id);
+
+// remember base + last store/date
+try{
+  $('base').value=localStorage.getItem('wac-base')||'';
+  $('store').value=localStorage.getItem('wac-laststore')||'';
+}catch(e){}
+
+// prefill today's date
+if(!$('date').value){const d=new Date().toISOString().slice(0,10);$('date').value=d;}
+
+$('make').onclick=()=>{
+  const base=$('base').value.trim();
+  const img=$('img').value.trim();
+  const audio=$('audio').value.trim();
+  const store=$('store').value.trim();
+  const date=$('date').value.trim();
+
+  const problems=[];
+  if(!base) problems.push("the viewer page address");
+  if(!img) problems.push("the photo URL");
+  if(!audio) problems.push("the audio URL");
+  if(problems.length){
+    $('warn').textContent="Still need: "+problems.join(", ")+".";
+    $('warn').classList.add('show');$('out').classList.remove('show');
+    return;
+  }
+  $('warn').classList.remove('show');
+
+  // save base + store for next time
+  try{localStorage.setItem('wac-base',base);if(store)localStorage.setItem('wac-laststore',store);}catch(e){}
+
+  const q=new URLSearchParams();
+  q.set('img',img);q.set('audio',audio);
+  if(store)q.set('store',store);
+  if(date)q.set('date',date);
+  const link=base+(base.includes('?')?'&':'?')+q.toString();
+
+  $('linkbox').textContent=link;
+  $('out').classList.add('show');
+  $('out').scrollIntoView({behavior:'smooth',block:'nearest'});
+};
+
+$('copy').onclick=async()=>{
+  const link=$('linkbox').textContent;
+  try{await navigator.clipboard.writeText(link);toast("Link copied \u2014 paste it in your email.");}
+  catch(e){
+    // fallback: select the text
+    const r=document.createRange();r.selectNodeContents($('linkbox'));
+    const sel=getSelection();sel.removeAllRanges();sel.addRange(r);
+    toast("Selected \u2014 long-press to copy.");
+  }
+};
+$('open').onclick=()=>{const link=$('linkbox').textContent;if(link)window.open(link,'_blank');};
+
+function toast(m){const t=$('toast');t.textContent=m;t.classList.add('show');clearTimeout(t._);t._=setTimeout(()=>t.classList.remove('show'),2600);}
+</script>
+</body>
+</html>
